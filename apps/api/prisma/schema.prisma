@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SpaceMemberRole {
+  OWNER
+  MEMBER
+}
+
+enum ExpenseSplitMode {
+  EQUAL
+  WEIGHT
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  refreshTokens RefreshToken[]
+  ownedSpaces   Space[]        @relation("SpaceOwner")
+  memberships   SpaceMember[]
+  expensesPaid  Expense[]      @relation("ExpensePayer")
+  expenseSplits ExpenseSplit[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Space {
+  id          String   @id @default(uuid())
+  name        String
+  ownerId     String
+  owner       User     @relation("SpaceOwner", fields: [ownerId], references: [id])
+  inviteToken String   @unique
+  createdAt   DateTime @default(now())
+
+  members  SpaceMember[]
+  expenses Expense[]
+
+  @@index([ownerId])
+}
+
+model SpaceMember {
+  id       String          @id @default(uuid())
+  spaceId  String
+  space    Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     SpaceMemberRole
+  joinedAt DateTime        @default(now())
+
+  @@unique([spaceId, userId])
+  @@index([userId])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  spaceId     String
+  space       Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  amount      Decimal  @db.Decimal(12, 2)
+  payerId     String
+  payer       User     @relation("ExpensePayer", fields: [payerId], references: [id])
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  splits ExpenseSplit[]
+
+  @@index([spaceId])
+  @@index([payerId])
+  @@index([createdAt])
+}
+
+model ExpenseSplit {
+  id        String           @id @default(uuid())
+  expenseId String
+  expense   Expense          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode      ExpenseSplitMode
+  weight    Decimal?         @db.Decimal(12, 4)
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+}

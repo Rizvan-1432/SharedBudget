@@ -1,0 +1,19 @@
+{
+  "name": "sharedbudget",
+  "private": true,
+  "overrides": {
+    "prisma": "6.19.0",
+    "@prisma/client": "6.19.0"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run start:dev -w api",
+    "web:dev": "npm run dev -w web",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate -w api",
+    "db:deploy": "npm run prisma:deploy -w api"
+  }
+}
